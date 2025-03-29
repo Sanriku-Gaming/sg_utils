@@ -94,7 +94,7 @@ Utils.Vehicle = {
         TriggerEvent('vehiclekeys:client:SetOwner', plate)
     end,
 
-    setFuel = function(vehicle, amount)
+    setFuel = function(vehicle, plate, amount)
         if fuel == 'ox_fuel' then
             Entity(vehicle).state:set('fuel', amount or 100.0)
         else
@@ -201,6 +201,74 @@ Utils.UI = {
             exports['qb-target']:RemoveZone(target)
         elseif target == 'ox' then
             exports.ox_target:removeLocalEntity(target, name)
+        end
+    end,
+
+    sendDispatch = function(options)
+        -- Default options
+        local defaults = {
+            title = 'Alert',          -- Alert title
+            description = '',         -- Alert description
+            location = '',            -- Location description (can be empty)
+            coords = vector3(0,0,0),  -- Alert coordinates
+            code = '10-31',           -- Alert code
+            sprite = 51,              -- Blip sprite
+            color = 1,                -- Blip color
+            scale = 1.0,              -- Blip scale
+            length = 5,               -- Alert duration in minutes
+            jobs = {'police'},        -- Jobs to receive the alert
+            sound = true              -- Play sound (boolean)
+        }
+
+        for k, v in pairs(defaults) do
+            if not options[k] then options[k] = v end
+        end
+
+        local dispatch = Config.Framework.dispatch:lower()
+
+        if dispatch == 'cd' then
+            local data = exports['cd_dispatch']:GetPlayerInfo()
+            local jobsTable = {}
+
+            for _, jobName in ipairs(options.jobs) do
+                table.insert(jobsTable, jobName)
+            end
+
+            TriggerServerEvent('cd_dispatch:AddNotification', {
+                job_table = jobsTable,
+                coords = options.coords or data.coords,
+                title = options.title,
+                message = options.description,
+                flash = 0,
+                unique_id = tostring(math.random(0000000, 9999999)),
+                blip = {
+                    sprite = options.sprite,
+                    scale = options.scale,
+                    colour = options.color,
+                    flashes = false,
+                    text = options.title,
+                    time = (options.length * 60 * 1000),
+                    sound = options.sound and 1 or 0,
+                }
+            })
+        elseif dispatch == 'ps' then
+            exports['ps-dispatch']:CustomAlert({
+                coords = options.coords,
+                message = options.title,
+                dispatchCode = options.code,
+                description = options.description,
+                radius = 0,
+                sprite = options.sprite,
+                color = options.color,
+                scale = options.scale,
+                length = options.length,
+            })
+        else
+            local description = options.location ~= ''
+                and options.description .. ' | ' .. options.location
+                or options.description
+
+            TriggerServerEvent('police:server:policeAlert', description)
         end
     end
 }

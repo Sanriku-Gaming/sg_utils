@@ -9,6 +9,7 @@ Config.Framework = {
     target      = 'qb',                                 -- 'qb' or 'ox'
     notify      = 'qb',                                 -- 'qb', 'okok', or 'ox'
     banking     = 'qb',                                 -- 'qb', 'qs', or 'renewed'
+    dispatch    = 'qb',                                 -- 'qb', 'cd', 'ps'
     fuel        = 'LegacyFuel',                         -- 'LegacyFuel', 'ps-fuel', 'ox_fuel', etc.
 }
 
