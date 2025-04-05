@@ -10,6 +10,16 @@ local banking = Config.Framework.banking:lower()
 --  Player Utils    --
 ----------------------
 Utils.Player = {
+    ---@param player table Player object
+    ---@param permission string Permission to check
+    hasPermission = function(player, permission)
+        if frameworkCore == 'qb' then
+            return Core.Functions.HasPermission(player.PlayerData.source, permission)
+        elseif frameworkCore == 'qbx' then
+            return exports.qbx_core:HasPermission(player.PlayerData.source, permission)
+        end
+    end,
+
     ---@param source number Players server ID
     ---@return table|nil player Player object or nil if not found
     getPlayer = function(source)
@@ -56,6 +66,65 @@ Utils.Player = {
             return player.PlayerData.citizenid
         elseif frameworkCore == 'qbx' then
             return player.PlayerData.citizenid
+        end
+    end,
+
+    getJobCount = function(jobList, onDutyOnly)
+        local count = 0
+        local players = Utils.Player.getAllPlayers()
+
+        for _, playerObject in pairs(players) do
+            if playerObject then
+                local job = playerObject.PlayerData.job.name
+                if job and Utils.Table.contains(jobList, job) then
+                    if not onDutyOnly or playerObject.PlayerData.job.onduty then
+                        count = count + 1
+                    end
+                end
+            end
+        end
+        return count
+    end,
+
+    getPoliceCount = function(onDutyOnly)
+        return Utils.Player.getJobCount(Config.PoliceJobs, onDutyOnly)
+    end,
+
+    getEMSCount = function(onDutyOnly)
+        return Utils.Player.getJobCount(Config.EMSJobs, onDutyOnly)
+    end,
+}
+
+-----------------------
+--     Job Utils     --
+-----------------------
+Utils.Job = {
+    setJob = function(player, jobName, grade)
+        if frameworkCore == 'qb' then
+            return player.Functions.SetJob(jobName, grade)
+        elseif frameworkCore == 'qbx' then
+            return player.Functions.SetJob(jobName, grade)
+        end
+    end,
+
+    setJobDuty = function(player, onDuty)
+        if frameworkCore == 'qb' then
+            return player.Functions.SetJobDuty(onDuty)
+        elseif frameworkCore == 'qbx' then
+            return player.Functions.SetJobDuty(onDuty)
+        end
+    end,
+}
+
+----------------------
+--    Gang Utlils   --
+----------------------
+Utils.Gang = {
+    setGang = function(player, gangName, grade)
+        if frameworkCore == 'qb' then
+            return player.Functions.SetGang(gangName, grade)
+        elseif frameworkCore == 'qbx' then
+            return player.Functions.SetGang(gangName, grade)
         end
     end,
 }
@@ -165,20 +234,18 @@ Utils.Inventory = {
         end
     end,
 
-    ---@param source number|table Player source ID or player object
-    ---@param filterBlacklisted boolean Whether to filter out blacklisted items
+    ---@param player table|number Player Table or source ID
     ---@return table items Table of player's inventory items
-    getPlayerItems = function(source, filterBlacklisted)
-        local playerSource = type(source) == 'table' and source.PlayerData.source or source
-        local playerObject = type(source) == 'table' and source or Utils.Player.getPlayer(source)
+    getPlayerItems = function(player)
+        local playerSource = type(player) == 'table' and player.PlayerData.source or player
+        local playerObject = type(player) == 'table' and player or Utils.Player.getPlayer(player)
         local items = {}
-
         if not playerObject then return items end
 
         if inventory == 'ox' then
             local inventoryItems = exports.ox_inventory:GetInventoryItems(playerSource) or {}
             for _, item in pairs(inventoryItems) do
-                if item and (not filterBlacklisted or not IsItemBlacklisted(item.name)) then
+                if item then
                     table.insert(items, {
                         name = item.name,
                         label = item.label,
@@ -192,7 +259,7 @@ Utils.Inventory = {
             for _, item in pairs(inventoryItems) do
                 if item then
                     local itemData = Utils.Inventory.getItemData(item.name)
-                    if itemData and (not filterBlacklisted or not IsItemBlacklisted(item.name)) then
+                    if itemData then
                         table.insert(items, {
                             name = item.name,
                             label = itemData.label,
@@ -203,9 +270,22 @@ Utils.Inventory = {
                 end
             end
         end
-
         return items
-    end
+    end,
+
+    openStash = function(source, stashId, maxWeight, maxSlots)
+        if inventory == 'qb' then
+            TriggerClientEvent('inventory:client:SetCurrentStash', source, stashId)
+            return Core.Functions.ExecuteSql('SELECT * FROM stashitems WHERE stash = ?', {stashId})
+        elseif inventory == 'ps' then
+            return exports['ps-inventory']:OpenInventory('stash', stashId, {
+                maxweight = maxWeight,
+                slots = maxSlots,
+            })
+        elseif inventory == 'ox' then
+            return exports.ox_inventory:OpenInventory('stash', {id = stashId, weight = maxWeight, slots = maxSlots}, source)
+        end
+    end,
 }
 
 ----------------------

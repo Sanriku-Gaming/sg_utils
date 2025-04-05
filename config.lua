@@ -1,7 +1,7 @@
 Config = {}
 
 -- Debug settings
-Config.Debug = false                                    -- Enable debug mode for additional console output
+Config.Debug = true                                    -- Enable debug mode for additional console output
 
 Config.Framework = {
     core        = 'qb',                                 -- 'qb' or 'qbx'
@@ -28,4 +28,13 @@ Config.UI = {
 Config.Vehicle = {
     defaultEngineState = false,                         -- Default engine state when spawning vehicles
     defaultModIndexes = { 11, 12, 13, 15, 16 },         -- Default mod indexes for maxMods function
+}
+
+Config.PoliceJobs = {                                   -- Default police jobs, used in Utils.Player.getPoliceCount()
+    'police',
+    'sheriff'
+}
+
+Config.EMSJobs = {                                      -- Default EMS jobs, used in Utils.Player.getEMSCount()
+    'ambulance',
 }

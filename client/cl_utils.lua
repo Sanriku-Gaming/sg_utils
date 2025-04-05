@@ -2,9 +2,10 @@ Utils = {}
 
 local Core = nil
 local frameworkCore = Config.Framework.core:lower()
-local target = Config.Framework.target:lower()
+local targetScript = Config.Framework.target:lower()
 local inventory = Config.Framework.inventory:lower()
 local notify = Config.Framework.notify:lower()
+local dispatch = Config.Framework.dispatch:lower()
 local fuel = Config.Framework.fuel
 
 ----------------------
@@ -33,6 +34,26 @@ Utils.Player = {
         elseif frameworkCore == 'qbx' then
             local playerData = exports.qbx_core:GetPlayerData()
             return playerData.charinfo.firstname .. ' ' .. playerData.charinfo.lastname
+        end
+    end,
+
+    isOnDuty = function()
+        local playerData = Utils.Player.getData()
+        return playerData.job and playerData.job.onduty or false
+    end,
+
+    -- In cl_utils.lua
+    setDuty = function(state)
+        local currentState = Utils.Player.isOnDuty()
+
+        if state ~= nil then
+            if state ~= currentState then
+                TriggerServerEvent("QBCore:ToggleDuty")
+            end
+            return state
+        else
+            TriggerServerEvent("QBCore:ToggleDuty")
+            return not currentState
         end
     end,
 }
@@ -64,7 +85,6 @@ Utils.Vehicle = {
         local vehicle = CreateVehicle(hash, coords.x, coords.y, coords.z, coords.w, true, true)
         while not DoesEntityExist(vehicle) do Wait(10) end
 
-        -- Use provided engine state or default from config
         local useEngineState = engineState
         if useEngineState == nil then
             useEngineState = Config.Vehicle.defaultEngineState
@@ -166,12 +186,12 @@ Utils.UI = {
     addTarget = function(entity, options, distance, name)
         local targetDistance = distance or Config.UI.defaultTargetDistance
 
-        if target == 'qb' then
+        if targetScript == 'qb' then
             return exports['qb-target']:AddTargetEntity(entity, {
                 options = options,
                 distance = targetDistance
             })
-        elseif target == 'ox' then
+        elseif targetScript == 'ox' then
             local oxOptions = {}
 
             for i, option in ipairs(options) do
@@ -197,9 +217,9 @@ Utils.UI = {
     end,
 
     removeTarget = function(target, name)
-        if target == 'qb' then
+        if targetScript == 'qb' then
             exports['qb-target']:RemoveZone(target)
-        elseif target == 'ox' then
+        elseif targetScript == 'ox' then
             exports.ox_target:removeLocalEntity(target, name)
         end
     end,
@@ -207,24 +227,22 @@ Utils.UI = {
     sendDispatch = function(options)
         -- Default options
         local defaults = {
-            title = 'Alert',          -- Alert title
-            description = '',         -- Alert description
-            location = '',            -- Location description (can be empty)
-            coords = vector3(0,0,0),  -- Alert coordinates
-            code = '10-31',           -- Alert code
-            sprite = 51,              -- Blip sprite
-            color = 1,                -- Blip color
-            scale = 1.0,              -- Blip scale
-            length = 5,               -- Alert duration in minutes
-            jobs = {'police'},        -- Jobs to receive the alert
-            sound = true              -- Play sound (boolean)
+            title = 'Alert',                    -- Alert title
+            description = '',                   -- Alert description
+            location = '',                      -- Location description (can be empty)
+            coords = vector3(0,0,0),            -- Alert coordinates
+            code = '10-31',                     -- Alert code
+            sprite = 51,                        -- Blip sprite
+            color = 1,                          -- Blip color
+            scale = 1.0,                        -- Blip scale
+            length = 5,                         -- Alert duration in minutes
+            jobs = {'police'},                  -- Jobs to receive the alert
+            sound = true                        -- Play sound (boolean)
         }
 
         for k, v in pairs(defaults) do
             if not options[k] then options[k] = v end
         end
-
-        local dispatch = Config.Framework.dispatch:lower()
 
         if dispatch == 'cd' then
             local data = exports['cd_dispatch']:GetPlayerInfo()
@@ -303,12 +321,16 @@ Utils.World = {
         local vehicles = GetGamePool('CVehicle')
         local missionVehicleHandle = missionVehicle or 0
         local deletedCount = 0
+        local radiusSquared = radius * radius
 
         for _, vehicle in ipairs(vehicles) do
             if vehicle ~= missionVehicleHandle and DoesEntityExist(vehicle) then
-                local distance = #(coords - GetEntityCoords(vehicle))
+                local vehicleCoords = GetEntityCoords(vehicle)
 
-                if distance <= radius then
+                local dx, dy, dz = coords.x - vehicleCoords.x, coords.y - vehicleCoords.y, coords.z - vehicleCoords.z
+                local distSquared = dx*dx + dy*dy + dz*dz
+
+                if distSquared <= radiusSquared then
                     local isPlayerVehicle = IsVehiclePreviouslyOwnedByPlayer(vehicle)
                     local hasDriver = GetPedInVehicleSeat(vehicle, -1) ~= 0
 
