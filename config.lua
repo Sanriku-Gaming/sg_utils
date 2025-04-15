@@ -9,7 +9,7 @@ Config.Framework = {
     target      = 'qb',                                 -- 'qb' or 'ox'
     notify      = 'qb',                                 -- 'qb', 'okok', or 'ox'
     banking     = 'qb',                                 -- 'qb', 'qs', or 'renewed'
-    dispatch    = 'qb',                                 -- 'qb', 'cd', 'ps'
+    dispatch    = 'qb',                                 -- 'qb', 'cd', 'ps', 'sonoran'
     fuel        = 'LegacyFuel',                         -- 'LegacyFuel', 'ps-fuel', 'ox_fuel', etc.
 }
 
@@ -22,6 +22,19 @@ Config.Notifications = {
 -- UI settings
 Config.UI = {
     defaultTargetDistance = 2.0,                        -- Default target interaction distance
+}
+
+-- Date and time formats
+Config.DateTime = {
+    default = 1,
+    formats = {
+        [1] = "%d-%m-%Y %H:%M",
+        [2] = "%Y-%m-%d %H:%M",
+        [3] = "%d/%m/%Y %H:%M",
+        [4] = "%m/%d/%Y %H:%M:%S",
+        [5] = "%H:%M:%S %d/%m/%Y",
+        [6] = "%B %d, %Y %H:%M"
+    }
 }
 
 -- Vehicle settings

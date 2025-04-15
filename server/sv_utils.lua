@@ -1,4 +1,4 @@
-Utils = {}
+Utils = Utils or {}
 
 local Core = nil
 local frameworkCore = Config.Framework.core:lower()
@@ -69,20 +69,42 @@ Utils.Player = {
         end
     end,
 
-    getJobCount = function(jobList, onDutyOnly)
+    getJobCount = function(jobInput, onDutyOnly)
         local count = 0
         local players = Utils.Player.getAllPlayers()
 
+        local checkJob
+
+        if type(jobInput) == 'string' then
+            checkJob = function(job)
+                return job == jobInput
+            end
+        elseif type(jobInput) == 'table' then
+            local jobLookup = {}
+            for _, jobName in pairs(jobInput) do
+                jobLookup[jobName] = true
+            end
+
+            checkJob = function(job)
+                return jobLookup[job] == true
+            end
+        else
+            print("^1[sg_utils]^0 Error: getJobCount received invalid job input type: " .. type(jobInput))
+            return 0
+        end
+
         for _, playerObject in pairs(players) do
-            if playerObject then
+            if playerObject and playerObject.PlayerData and playerObject.PlayerData.job then
                 local job = playerObject.PlayerData.job.name
-                if job and Utils.Table.contains(jobList, job) then
+
+                if job and checkJob(job) then
                     if not onDutyOnly or playerObject.PlayerData.job.onduty then
                         count = count + 1
                     end
                 end
             end
         end
+
         return count
     end,
 
@@ -93,6 +115,52 @@ Utils.Player = {
     getEMSCount = function(onDutyOnly)
         return Utils.Player.getJobCount(Config.EMSJobs, onDutyOnly)
     end,
+}
+
+-----------------------
+--   Shared Utils    --
+-----------------------
+Utils.Shared = {
+    getGangData = function(gangName)
+        if frameworkCore == 'qb' then
+            return gangName and Core.Shared.Gangs[gangName] or Core.Shared.Gangs
+        elseif frameworkCore == 'qbx' then
+            return gangName and exports.qbx_core:GetGangs()[gangName] or exports.qbx_core:GetGangs()
+        end
+    end,
+
+    getJobData = function(jobName)
+        if frameworkCore == 'qb' then
+            return jobName and Core.Shared.Jobs[jobName] or Core.Shared.Jobs
+        elseif frameworkCore == 'qbx' then
+            return jobName and exports.qbx_core:GetJobs()[jobName] or exports.qbx_core:GetJobs()
+        end
+    end,
+
+    getGradeData = function(entityType, entityName, gradeLevel)
+        if entityType == 'job' then
+            if frameworkCore == 'qb' then
+                return Core.Shared.Jobs[entityName].grades[tostring(gradeLevel)]
+            elseif frameworkCore == 'qbx' then
+                return exports.qbx_core:GetJobs()[entityName].grades[gradeLevel]
+            end
+        elseif entityType == 'gang' then
+            if frameworkCore == 'qb' then
+                return Core.Shared.Gangs[entityName].grades[tostring(gradeLevel)]
+            elseif frameworkCore == 'qbx' then
+                return exports.qbx_core:GetGangs()[entityName].grades[gradeLevel]
+            end
+        end
+        return nil
+    end,
+
+    getItemLabel = function(itemName)
+        if frameworkCore == 'qb' then
+            return Core.Shared.Items[itemName]?.label or itemName
+        elseif frameworkCore == 'qbx' then
+            return exports.qbx_core:GetItems()[itemName]?.label or itemName
+        end
+    end
 }
 
 -----------------------
@@ -273,17 +341,20 @@ Utils.Inventory = {
         return items
     end,
 
-    openStash = function(source, stashId, maxWeight, maxSlots)
+    openStash = function(src, stashId, stashData)
         if inventory == 'qb' then
-            TriggerClientEvent('inventory:client:SetCurrentStash', source, stashId)
-            return Core.Functions.ExecuteSql('SELECT * FROM stashitems WHERE stash = ?', {stashId})
+            return exports['qb-inventory']:OpenInventory(src, stashId, {
+                maxweight = stashData.maxWeight,
+                slots = stashData.maxSlots,
+                label = stashData.label or 'stash-'..stashId,
+            })
         elseif inventory == 'ps' then
-            return exports['ps-inventory']:OpenInventory('stash', stashId, {
+            return exports['ps-inventory']:OpenInventory(src, 'stash-' .. stashId, {
                 maxweight = maxWeight,
                 slots = maxSlots,
             })
         elseif inventory == 'ox' then
-            return exports.ox_inventory:OpenInventory('stash', {id = stashId, weight = maxWeight, slots = maxSlots}, source)
+            return exports.ox_inventory:forceOpenInventory(src, 'stash', stashId)
         end
     end,
 }
@@ -377,6 +448,26 @@ Utils.UI = {
         end
     end
 }
+
+----------------------
+--      Events      --
+----------------------
+RegisterNetEvent('sg_utils:server:SonoranDispatch', function(options)
+    local caller = math.random(0, 1) == 1 and 'A man' or 'A woman'
+    local location = options.location .. ', ' .. options.zone
+    exports["sonorancad"]:performApiRequest({{
+        ["serverId"] = GetConvar("sonoran_serverId", 1),
+        ["isEmergency"] = true,
+        ["caller"] = caller,
+        ["location"] = location,
+        ["description"] = options.description,
+        ["metaData"] = {
+            ["useCallLocation"] = true,
+            ["plate"] = options.plate,
+            ["postal"] = options.postal or 'Unk'
+        }
+    }}, "CALL_911")
+end)
 
 ----------------------
 --    Framework     --

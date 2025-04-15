@@ -1,4 +1,4 @@
-Utils = {}
+Utils = Utils or {}
 
 local Core = nil
 local frameworkCore = Config.Framework.core:lower()
@@ -38,24 +38,74 @@ Utils.Player = {
     end,
 
     isOnDuty = function()
-        local playerData = Utils.Player.getData()
-        return playerData.job and playerData.job.onduty or false
+        local PlayerData = Utils.Player.getData()
+        return PlayerData.job.onduty
     end,
 
-    -- In cl_utils.lua
+    toggleDuty = function()
+        TriggerServerEvent("QBCore:ToggleDuty")
+        Wait(200)
+        local PlayerData = Utils.Player.getData()
+        return PlayerData.job.onduty
+    end,
+
     setDuty = function(state)
         local currentState = Utils.Player.isOnDuty()
+        if state == currentState then
+            return currentState
+        end
 
-        if state ~= nil then
-            if state ~= currentState then
-                TriggerServerEvent("QBCore:ToggleDuty")
-            end
-            return state
-        else
-            TriggerServerEvent("QBCore:ToggleDuty")
-            return not currentState
+        TriggerServerEvent("QBCore:ToggleDuty")
+        Wait(200)
+        local PlayerData = Utils.Player.getData()
+        return PlayerData.job.onduty
+    end,
+}
+
+-----------------------
+--   Shared Utils    --
+-----------------------
+Utils.Shared = {
+    getGangData = function(gangName)
+        if frameworkCore == 'qb' then
+            return gangName and Core.Shared.Gangs[gangName] or Core.Shared.Gangs
+        elseif frameworkCore == 'qbx' then
+            return gangName and exports.qbx_core:GetGangs()[gangName] or exports.qbx_core:GetGangs()
         end
     end,
+
+    getJobData = function(jobName)
+        if frameworkCore == 'qb' then
+            return jobName and Core.Shared.Jobs[jobName] or Core.Shared.Jobs
+        elseif frameworkCore == 'qbx' then
+            return jobName and exports.qbx_core:GetJobs()[jobName] or exports.qbx_core:GetJobs()
+        end
+    end,
+
+    getGradeData = function(entityType, entityName, gradeLevel)
+        if entityType == 'job' then
+            if frameworkCore == 'qb' then
+                return Core.Shared.Jobs[entityName].grades[tostring(gradeLevel)]
+            elseif frameworkCore == 'qbx' then
+                return exports.qbx_core:GetJobs()[entityName].grades[gradeLevel]
+            end
+        elseif entityType == 'gang' then
+            if frameworkCore == 'qb' then
+                return Core.Shared.Gangs[entityName].grades[tostring(gradeLevel)]
+            elseif frameworkCore == 'qbx' then
+                return exports.qbx_core:GetGangs()[entityName].grades[gradeLevel]
+            end
+        end
+        return nil
+    end,
+
+    getItemLabel = function(itemName)
+        if frameworkCore == 'qb' then
+            return Core.Shared.Items[itemName]?.label or itemName
+        elseif frameworkCore == 'qbx' then
+            return exports.qbx_core:GetItems()[itemName]?.label or itemName
+        end
+    end
 }
 
 ----------------------
@@ -183,7 +233,97 @@ Utils.UI = {
         end
     end,
 
-    addTarget = function(entity, options, distance, name)
+    addCircleZone = function(name, coords, radius, zoneOptions, targetOptions)
+        local zoneName = name or "circle_" .. math.random(1000, 9999)
+
+        if targetScript == 'qb' then
+            return exports['qb-target']:AddCircleZone(zoneName, coords, radius, {
+                name = zoneName,
+                useZ = zoneOptions.useZ,
+                debugPoly = zoneOptions.debugPoly
+            }, {
+                options = targetOptions,
+                distance = zoneOptions.distance or 2.5
+            })
+        elseif targetScript == 'ox' then
+            local oxOptions = {}
+            for i, option in ipairs(targetOptions) do
+                local oxOption = {
+                    name = zoneName .. i,
+                    label = option.label
+                }
+                if option.icon then
+                    oxOption.icon = option.icon
+                end
+                if option.canInteract then
+                    oxOption.canInteract = option.canInteract
+                end
+                if option.action then
+                    oxOption.onSelect = option.action
+                end
+                table.insert(oxOptions, oxOption)
+            end
+            return exports.ox_target:addSphereZone({
+                coords = coords,
+                radius = radius,
+                debug = zoneOptions.debugPoly,
+                options = oxOptions
+            })
+        end
+    end,
+
+    addBoxZone = function(name, coords, length, width, menuOptions, zoneOptions)
+        local zoneName = name or "box_" .. math.random(1000, 9999)
+        local heading = zoneOptions.heading or 0
+        local distance = zoneOptions.distance or 2.5
+
+        if targetScript == 'qb' then
+            return exports['qb-target']:AddBoxZone(zoneName, coords, length, width, {
+                name = zoneName,
+                heading = heading,
+                debugPoly = zoneOptions.debugPoly or false,
+                minZ = zoneOptions.minZ,
+                maxZ = zoneOptions.maxZ
+            }, {
+                options = menuOptions or {},
+                distance = distance
+            })
+        elseif targetScript == 'ox' then
+            local oxOptions = {}
+            for i, option in ipairs(menuOptions or {}) do
+                local oxOption = {
+                    name = zoneName .. i,
+                    label = option.label
+                }
+                if option.icon then
+                    oxOption.icon = option.icon
+                end
+                if option.canInteract then
+                    oxOption.canInteract = option.canInteract
+                end
+                if option.action then
+                    oxOption.onSelect = option.action
+                end
+                table.insert(oxOptions, oxOption)
+            end
+
+            local height = 2.0
+            if zoneOptions.minZ and zoneOptions.maxZ then
+                height = zoneOptions.maxZ - zoneOptions.minZ
+            end
+
+            return exports.ox_target:addBoxZone({
+                coords = coords,
+                size = vec3(length, width, height),
+                rotation = heading,
+                debug = zoneOptions.debugPoly or false,
+                options = oxOptions
+            })
+        end
+    end,
+
+    addTargetEntity = function(name, entity, options, distance)
+        local targetName = name or "target_" .. math.random(1000, 9999)
         local targetDistance = distance or Config.UI.defaultTargetDistance
 
         if targetScript == 'qb' then
@@ -196,10 +336,14 @@ Utils.UI = {
 
             for i, option in ipairs(options) do
                 local oxOption = {
-                    name = name .. i,
+                    name = targetName .. i,
                     label = option.label,
                     distance = targetDistance
                 }
+
+                if option.icon then
+                    oxOption.icon = option.icon
+                end
 
                 if option.canInteract then
                     oxOption.canInteract = option.canInteract
@@ -212,15 +356,40 @@ Utils.UI = {
                 table.insert(oxOptions, oxOption)
             end
 
-            return exports.ox_target:addLocalEntity(entity, oxOptions)
+            if NetworkGetEntityIsNetworked(entity) then
+                local netId = NetworkGetNetworkIdFromEntity(entity)
+                return exports.ox_target:addNetworkEntity({netId}, oxOptions)
+            else
+                return exports.ox_target:addLocalEntity(entity, oxOptions)
+            end
         end
     end,
 
-    removeTarget = function(target, name)
+    removeZone = function(target, name)
         if targetScript == 'qb' then
             exports['qb-target']:RemoveZone(target)
         elseif targetScript == 'ox' then
-            exports.ox_target:removeLocalEntity(target, name)
+            if name then
+                exports.ox_target:removeZone(name)
+            else
+                exports.ox_target:removeZone(target)
+            end
+        end
+    end,
+
+    removeTarget = function(target, name, type)
+        if targetScript == 'qb' then
+            exports['qb-target']:RemoveZone(target)
+        elseif targetScript == 'ox' then
+            type = type or 'entity'
+
+            if type == 'entity' then
+                exports.ox_target:removeLocalEntity(target, name)
+            elseif type == 'networked' then
+                exports.ox_target:removeNetworkEntity(target, name)
+            elseif type == 'zone' then
+                exports.ox_target:removeZone(name or target)
+            end
         end
     end,
 
@@ -281,6 +450,8 @@ Utils.UI = {
                 scale = options.scale,
                 length = options.length,
             })
+        elseif dispatch == 'sonoran' then
+            TriggerServerEvent('sg_utils:server:SonoranDispatch', options)
         else
             local description = options.location ~= ''
                 and options.description .. ' | ' .. options.location
@@ -363,6 +534,10 @@ Utils.World = {
         }
     end,
 
+    getZoneName = function(coords)
+        return GetLabelText(GetNameOfZone(coords.x, coords.y, coords.z))
+    end,
+
     getClosestPed = function(coords, peds)
         local closestPed, closestDistance = nil, -1
         for _, ped in ipairs(peds) do
@@ -432,5 +607,4 @@ CreateThread(function()
     end
 end)
 
--- Return Utils so it can be accessed via the export
 return Utils

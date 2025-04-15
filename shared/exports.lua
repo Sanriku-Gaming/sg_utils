@@ -1,3 +1,6 @@
+-- Function to provide access to utility modules
+-- @param options string|table|nil Optional parameter to specify which modules to return
+-- @return table Returns the requested utility modules or all modules if none specified
 local function GetUtils(options)
     if not Utils then
         print("^1[sg_utils]^0 Error: Utils is not defined yet. Returning empty object.")
@@ -5,11 +8,7 @@ local function GetUtils(options)
     end
 
     if not options then
-        if IsDuplicityVersion() then
-            return Utils
-        else
-            return Utils
-        end
+        return Utils
     end
 
     if type(options) == 'string' then
@@ -33,18 +32,12 @@ local function GetUtils(options)
                     print("^1[sg_utils]^0 Warning: Requested module '" .. moduleName .. "' not found.")
                 end
             end
+            return UtilsModules
         else
             return Utils
         end
-
-        return UtilsModules
     end
 
-    if IsDuplicityVersion() then
-        return Utils
-    else
-        return Utils
-    end
+    return Utils
 end
-
 exports('GetUtils', GetUtils)

@@ -4,7 +4,7 @@ game 'gta5'
 name 'sg_utils'
 author 'Nicky'
 description 'Framework agnostic utility functions'
-version '1.0.2'
+version '1.0.3'
 
 lua54 'yes'
 use_experimental_fxv2_oal 'yes'
@@ -16,13 +16,13 @@ shared_scripts {
     'shared/exports.lua'
 }
 
-client_scripts {
-    'client/cl_utils.lua',
-}
-
 server_scripts {
     'server/sv_utils.lua',
     'server/version_check.lua'
+}
+
+client_scripts {
+    'client/cl_utils.lua',
 }
 
 exports {

@@ -1,53 +1,5 @@
 Utils = Utils or {}
 
-local frameworkCore = Config.Framework.core:lower()
-
------------------------
---  Job/Gang Utils   --
------------------------
-Utils.Shared = {
-    getGangData = function(gangName)
-        if frameworkCore == 'qb' then
-            return Core.Shared.Gangs[gangName]
-        elseif frameworkCore == 'qbx' then
-            return exports.qbx_core:GetGangs()[gangName]
-        end
-    end,
-
-    getJobData = function(jobName)
-        if frameworkCore == 'qb' then
-            return Core.Shared.Jobs[jobName]
-        elseif frameworkCore == 'qbx' then
-            return exports.qbx_core:GetJobs()[jobName]
-        end
-    end,
-
-    getGradeData = function(entityType, entityName, gradeLevel)
-        if entityType == 'job' then
-            if frameworkCore == 'qb' then
-                return Core.Shared.Jobs[entityName].grades[tostring(gradeLevel)]
-            elseif frameworkCore == 'qbx' then
-                return exports.qbx_core:GetJobs()[entityName].grades[gradeLevel]
-            end
-        elseif entityType == 'gang' then
-            if frameworkCore == 'qb' then
-                return Core.Shared.Gangs[entityName].grades[tostring(gradeLevel)]
-            elseif frameworkCore == 'qbx' then
-                return exports.qbx_core:GetGangs()[entityName].grades[gradeLevel]
-            end
-        end
-        return nil
-    end,
-
-    getItemLabel = function(itemName)
-        if frameworkCore == 'qb' then
-            return Core.Shared.Items[itemName]?.label or itemName
-        elseif frameworkCore == 'qbx' then
-            return exports.qbx_core:GetItems()[itemName]?.label or itemName
-        end
-    end
-}
-
 ----------------------
 --   Table Utils    --
 ----------------------
@@ -141,15 +93,91 @@ Utils.DateTime = {
         return string.format("%d:%02d:%02d", hours, minutes, remainingSeconds)
     end,
 
-    formatDate = function(timestamp)
+    formatDate = function(timestamp, formatId)
         if not timestamp then return "Unknown" end
-        return os.date("%d-%m-%Y %H:%M", timestamp)
+
+        local formatId = formatId or Config.DateTime.default
+        local format = Config.DateTime.formats[formatId] or Config.DateTime.formats[1]
+
+        if IsDuplicityVersion() then
+            return os.date(format, timestamp)
+        else
+            local time = timestamp
+            if timestamp > 1000000000000 then
+                time = timestamp / 1000
+            end
+
+            local date = {}
+            date.year = 1970
+            date.month = 1
+            date.day = 1
+            date.hour = 0
+            date.min = 0
+            date.sec = 0
+
+            local days_per_month = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}
+
+            local total_days = math.floor(time / 86400)
+            date.sec = time % 60
+            date.min = math.floor((time % 3600) / 60)
+            date.hour = math.floor((time % 86400) / 3600)
+
+            local days_since_1970 = total_days
+            date.year = 1970
+
+            while true do
+                local days_in_year = 365
+                if date.year % 4 == 0 and (date.year % 100 ~= 0 or date.year % 400 == 0) then
+                    days_in_year = 366
+                    days_per_month[2] = 29
+                else
+                    days_per_month[2] = 28
+                end
+
+                if days_since_1970 < days_in_year then
+                    break
+                end
+
+                days_since_1970 = days_since_1970 - days_in_year
+                date.year = date.year + 1
+            end
+
+            date.month = 1
+            for i = 1, 12 do
+                if days_since_1970 < days_per_month[i] then
+                    date.month = i
+                    date.day = days_since_1970 + 1
+                    break
+                end
+                days_since_1970 = days_since_1970 - days_per_month[i]
+            end
+
+            local result = format
+
+            result = result:gsub("%%Y", string.format("%04d", date.year))
+            result = result:gsub("%%m", string.format("%02d", date.month))
+            result = result:gsub("%%d", string.format("%02d", date.day))
+            result = result:gsub("%%H", string.format("%02d", date.hour))
+            result = result:gsub("%%M", string.format("%02d", date.min))
+            result = result:gsub("%%S", string.format("%02d", date.sec))
+
+            local months = {"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"}
+            result = result:gsub("%%B", months[date.month])
+
+            return result
+        end
     end,
 
     timeAgo = function(timestamp)
         if not timestamp then return "Never" end
 
-        local now = os.time()
+        local now
+        if IsDuplicityVersion() then
+            now = os.time()
+        else
+            now = GetGameTimer() / 1000
+        end
+
         local diff = now - timestamp
 
         if diff < 60 then
@@ -160,6 +188,14 @@ Utils.DateTime = {
             return math.floor(diff / 3600) .. " hours ago"
         else
             return math.floor(diff / 86400) .. " days ago"
+        end
+    end,
+
+    getCurrentTimestamp = function()
+        if IsDuplicityVersion() then
+            return os.time()
+        else
+            return GetGameTimer() / 1000
         end
     end
 }
