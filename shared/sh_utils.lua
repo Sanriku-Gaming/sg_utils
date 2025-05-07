@@ -100,7 +100,11 @@ Utils.DateTime = {
         local format = Config.DateTime.formats[formatId] or Config.DateTime.formats[1]
 
         if IsDuplicityVersion() then
-            return os.date(format, timestamp)
+            local time = timestamp
+            if time > 1000000000000 then
+                time = time / 1000
+            end
+            return os.date(format, time)
         else
             local time = timestamp
             if timestamp > 1000000000000 then

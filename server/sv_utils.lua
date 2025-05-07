@@ -40,6 +40,14 @@ Utils.Player = {
         end
     end,
 
+    getOfflinePlayer = function(citizenid)
+        if frameworkCore == 'qb' then
+            return Core.Player.GetOfflinePlayer(citizenid) or nil
+        elseif frameworkCore == 'qbx' then
+            return exports.qbx_core:GetOfflinePlayer(citizenid) or nil
+        end
+    end,
+
     ---@return table players Table of all online players
     getAllPlayers = function()
         if frameworkCore == 'qb' then
@@ -67,53 +75,6 @@ Utils.Player = {
         elseif frameworkCore == 'qbx' then
             return player.PlayerData.citizenid
         end
-    end,
-
-    getJobCount = function(jobInput, onDutyOnly)
-        local count = 0
-        local players = Utils.Player.getAllPlayers()
-
-        local checkJob
-
-        if type(jobInput) == 'string' then
-            checkJob = function(job)
-                return job == jobInput
-            end
-        elseif type(jobInput) == 'table' then
-            local jobLookup = {}
-            for _, jobName in pairs(jobInput) do
-                jobLookup[jobName] = true
-            end
-
-            checkJob = function(job)
-                return jobLookup[job] == true
-            end
-        else
-            print("^1[sg_utils]^0 Error: getJobCount received invalid job input type: " .. type(jobInput))
-            return 0
-        end
-
-        for _, playerObject in pairs(players) do
-            if playerObject and playerObject.PlayerData and playerObject.PlayerData.job then
-                local job = playerObject.PlayerData.job.name
-
-                if job and checkJob(job) then
-                    if not onDutyOnly or playerObject.PlayerData.job.onduty then
-                        count = count + 1
-                    end
-                end
-            end
-        end
-
-        return count
-    end,
-
-    getPoliceCount = function(onDutyOnly)
-        return Utils.Player.getJobCount(Config.PoliceJobs, onDutyOnly)
-    end,
-
-    getEMSCount = function(onDutyOnly)
-        return Utils.Player.getJobCount(Config.EMSJobs, onDutyOnly)
     end,
 }
 
@@ -181,6 +142,53 @@ Utils.Job = {
         elseif frameworkCore == 'qbx' then
             return player.Functions.SetJobDuty(onDuty)
         end
+    end,
+
+    getJobCount = function(jobInput, onDutyOnly)
+        local count = 0
+        local players = Utils.Player.getAllPlayers()
+
+        local checkJob
+
+        if type(jobInput) == 'string' then
+            checkJob = function(job)
+                return job == jobInput
+            end
+        elseif type(jobInput) == 'table' then
+            local jobLookup = {}
+            for _, jobName in pairs(jobInput) do
+                jobLookup[jobName] = true
+            end
+
+            checkJob = function(job)
+                return jobLookup[job] == true
+            end
+        else
+            print("^1[sg_utils]^0 Error: getJobCount received invalid job input type: " .. type(jobInput))
+            return 0
+        end
+
+        for _, playerObject in pairs(players) do
+            if playerObject and playerObject.PlayerData and playerObject.PlayerData.job then
+                local job = playerObject.PlayerData.job.name
+
+                if job and checkJob(job) then
+                    if not onDutyOnly or playerObject.PlayerData.job.onduty then
+                        count = count + 1
+                    end
+                end
+            end
+        end
+
+        return count
+    end,
+
+    getPoliceCount = function(onDutyOnly)
+        return Utils.Player.getJobCount(Config.PoliceJobs, onDutyOnly)
+    end,
+
+    getEMSCount = function(onDutyOnly)
+        return Utils.Player.getJobCount(Config.EMSJobs, onDutyOnly)
     end,
 }
 
