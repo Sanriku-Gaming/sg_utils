@@ -149,15 +149,23 @@ Utils.Job = {
         local players = Utils.Player.getAllPlayers()
 
         local checkJob
-
         if type(jobInput) == 'string' then
+            -- Handle single job name as string: 'police'
             checkJob = function(job)
                 return job == jobInput
             end
         elseif type(jobInput) == 'table' then
             local jobLookup = {}
-            for _, jobName in pairs(jobInput) do
-                jobLookup[jobName] = true
+            for k, v in pairs(jobInput) do
+                if type(k) == 'number' then
+                    -- Handle array format: {'police', 'sheriff'}
+                    jobLookup[v] = true
+                else
+                    -- Handle hash table format: {['police'] = true}
+                    if v == true then
+                        jobLookup[k] = true
+                    end
+                end
             end
 
             checkJob = function(job)
