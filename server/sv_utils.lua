@@ -365,7 +365,7 @@ Utils.Inventory = {
                 label = stashData.label or 'stash-'..stashId,
             })
         elseif inventory == 'ps' then
-            return exports['ps-inventory']:OpenInventory(src, 'stash-' .. stashId, {
+            return exports['ps-inventory']:OpenInventory(src, stashId, {
                 maxweight = maxWeight,
                 slots = maxSlots,
             })
