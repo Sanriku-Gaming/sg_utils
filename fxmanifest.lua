@@ -4,7 +4,7 @@ game 'gta5'
 name 'sg_utils'
 author 'Nicky'
 description 'Framework agnostic utility functions'
-version '1.0.4'
+version '1.0.5'
 
 lua54 'yes'
 use_experimental_fxv2_oal 'yes'

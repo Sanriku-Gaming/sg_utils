@@ -51,3 +51,18 @@ Config.PoliceJobs = {                                   -- Default police jobs, 
 Config.EMSJobs = {                                      -- Default EMS jobs, used in Utils.Player.getEMSCount()
     'ambulance',
 }
+
+-- Dispatch defaults
+Config.DispatchDefaults = {
+    title = 'Alert',
+    description = '',
+    location = '',
+    coords = vector3(0,0,0),
+    code = '10-31',
+    sprite = 51,
+    color = 1,
+    scale = 1.0,
+    length = 5,
+    jobs = Config.PoliceJobs,
+    sound = true
+}

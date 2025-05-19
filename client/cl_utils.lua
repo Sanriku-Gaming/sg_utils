@@ -12,6 +12,7 @@ local fuel = Config.Framework.fuel
 --  Player Utils    --
 ----------------------
 Utils.Player = {
+    ---@return table playerData Player data table
     getData = function()
         if frameworkCore == 'qb' then
             return Core.Functions.GetPlayerData()
@@ -20,6 +21,7 @@ Utils.Player = {
         end
     end,
 
+    ---@return table jobData Job data table
     getJob = function()
         if frameworkCore == 'qb' then
             return Core.Functions.GetPlayerData().job
@@ -28,6 +30,7 @@ Utils.Player = {
         end
     end,
 
+    ---@return string playerName Player's full name
     getName = function()
         if frameworkCore == 'qb' then
             return Core.Functions.GetPlayerData().charinfo.firstname .. ' ' .. Core.Functions.GetPlayerData().charinfo.lastname
@@ -37,11 +40,13 @@ Utils.Player = {
         end
     end,
 
+    ---@return boolean isOnDuty Whether the player is on duty
     isOnDuty = function()
         local PlayerData = Utils.Player.getData()
         return PlayerData.job.onduty
     end,
 
+    ---@return boolean newDutyState The new duty state after toggling
     toggleDuty = function()
         TriggerServerEvent("QBCore:ToggleDuty")
         Wait(200)
@@ -49,6 +54,8 @@ Utils.Player = {
         return PlayerData.job.onduty
     end,
 
+    ---@param state boolean Desired duty state
+    ---@return boolean newDutyState The new duty state after setting
     setDuty = function(state)
         local currentState = Utils.Player.isOnDuty()
         if state == currentState then
@@ -66,6 +73,8 @@ Utils.Player = {
 --   Shared Utils    --
 -----------------------
 Utils.Shared = {
+    ---@param gangName string|nil Gang name or nil for all gangs
+    ---@return table gangData Gang data table or all gangs
     getGangData = function(gangName)
         if frameworkCore == 'qb' then
             return gangName and Core.Shared.Gangs[gangName] or Core.Shared.Gangs
@@ -74,6 +83,8 @@ Utils.Shared = {
         end
     end,
 
+    ---@param jobName string|nil Job name or nil for all jobs
+    ---@return table jobData Job data table or all jobs
     getJobData = function(jobName)
         if frameworkCore == 'qb' then
             return jobName and Core.Shared.Jobs[jobName] or Core.Shared.Jobs
@@ -82,6 +93,10 @@ Utils.Shared = {
         end
     end,
 
+    ---@param entityType string 'job' or 'gang'
+    ---@param entityName string Name of the job or gang
+    ---@param gradeLevel number|string Grade level
+    ---@return table|nil gradeData Grade data table or nil if not found
     getGradeData = function(entityType, entityName, gradeLevel)
         if entityType == 'job' then
             if frameworkCore == 'qb' then
@@ -99,11 +114,13 @@ Utils.Shared = {
         return nil
     end,
 
+    ---@param itemName string Item name
+    ---@return string label Item label or item name if not found
     getItemLabel = function(itemName)
         if frameworkCore == 'qb' then
-            return Core.Shared.Items[itemName]?.label or itemName
+            return Core.Shared.Items[itemName] and Core.Shared.Items[itemName].label or itemName
         elseif frameworkCore == 'qbx' then
-            return exports.qbx_core:GetItems()[itemName]?.label or itemName
+            return exports.qbx_core:GetItems()[itemName] and exports.qbx_core:GetItems()[itemName].label or itemName
         end
     end
 }
@@ -112,6 +129,9 @@ Utils.Shared = {
 -- Inventory Utils  --
 ----------------------
 Utils.Inventory = {
+    ---@param item string Item name
+    ---@param amount number Amount to check for
+    ---@return boolean hasItem Whether the player has the specified item(s)
     hasItem = function(item, amount)
         if inventory == 'qb' then
             return exports['qb-inventory']:HasItem(item, amount)
@@ -128,6 +148,10 @@ Utils.Inventory = {
 --  Vehicle Utils   --
 ----------------------
 Utils.Vehicle = {
+    ---@param model string|number Vehicle model name or hash
+    ---@param coords table Coordinates table with x, y, z, w
+    ---@param engineState boolean|nil Engine state (optional)
+    ---@return number vehicle Vehicle entity ID
     spawn = function(model, coords, engineState)
         local hash = type(model) == 'string' and joaat(model) or model
         lib.requestModel(hash)
@@ -146,6 +170,8 @@ Utils.Vehicle = {
         return vehicle
     end,
 
+    ---@param model string|number Vehicle model name or hash
+    ---@return string vehicleName Vehicle display name
     getName = function(model)
         if frameworkCore == 'qb' then
             local data = Core.Shared.Vehicles[model]
@@ -156,14 +182,21 @@ Utils.Vehicle = {
         end
     end,
 
+    ---@param vehicle number Vehicle entity ID
+    ---@return string plate Vehicle plate text
     getPlate = function(vehicle)
         return GetVehicleNumberPlateText(vehicle)
     end,
 
+    ---@param vehicle number Vehicle entity ID
+    ---@param plate string Vehicle plate text
     giveKeys = function(vehicle, plate)
         TriggerEvent('vehiclekeys:client:SetOwner', plate)
     end,
 
+    ---@param vehicle number Vehicle entity ID
+    ---@param plate string Vehicle plate text
+    ---@param amount number|nil Fuel amount (optional)
     setFuel = function(vehicle, plate, amount)
         if fuel == 'ox_fuel' then
             Entity(vehicle).state:set('fuel', amount or 100.0)
@@ -172,6 +205,8 @@ Utils.Vehicle = {
         end
     end,
 
+    ---@param vehicle number Vehicle entity ID
+    ---@param customModIndexes table|nil Custom mod indexes (optional)
     maxMods = function(vehicle, customModIndexes)
         local modIndexes = customModIndexes or Config.Vehicle.defaultModIndexes
         if not DoesEntityExist(vehicle) or not IsEntityAVehicle(vehicle) then return end
@@ -190,11 +225,16 @@ Utils.Vehicle = {
 --    Ped Utils     --
 ----------------------
 Utils.Ped = {
-    spawn = function(model, coords)
+    ---@param model string|number Ped model name or hash
+    ---@param coords table Coordinates table with x, y, z, w
+    ---@param isNetworked boolean|nil Whether the ped is networked (optional)
+    ---@return number ped Ped entity ID
+    spawn = function(model, coords, isNetworked)
+        isNetworked = isNetworked or false
         local hash = type(model) == 'string' and joaat(model) or model
         lib.requestModel(hash)
 
-        local ped = CreatePed(4, hash, coords.x, coords.y, coords.z - 1, coords.w, false, true)
+        local ped = CreatePed(4, hash, coords.x, coords.y, coords.z - 1, coords.w, isNetworked, true)
         while not DoesEntityExist(ped) do Wait(10) end
 
         SetEntityAsMissionEntity(ped, true, true)
@@ -206,6 +246,8 @@ Utils.Ped = {
         return ped
     end,
 
+    ---@param ped number Ped entity ID
+    ---@param scenario string Scenario name
     scenario = function(ped, scenario)
         TaskStartScenarioInPlace(ped, scenario, 0, true)
     end,
@@ -215,6 +257,10 @@ Utils.Ped = {
 --    UI Utils      --
 ----------------------
 Utils.UI = {
+    ---@param message string Notification message
+    ---@param type string Notification type ('success', 'error', 'info')
+    ---@param duration number|nil Duration in ms (optional)
+    ---@param title string|nil Notification title (optional)
     sendNotify = function(message, type, duration, title)
         local notifyDuration = duration or Config.Notifications.defaultDuration
         local notifyTitle = title or Config.Notifications.title
@@ -233,6 +279,12 @@ Utils.UI = {
         end
     end,
 
+    ---@param name string|nil Zone name (optional)
+    ---@param coords vector3 Center coordinates
+    ---@param radius number Zone radius
+    ---@param zoneOptions table Zone options
+    ---@param targetOptions table Target options
+    ---@return any zoneHandle Zone handle or ID
     addCircleZone = function(name, coords, radius, zoneOptions, targetOptions)
         local zoneName = name or "circle_" .. math.random(1000, 9999)
 
@@ -272,6 +324,13 @@ Utils.UI = {
         end
     end,
 
+    ---@param name string|nil Zone name (optional)
+    ---@param coords vector3 Center coordinates
+    ---@param length number Box length
+    ---@param width number Box width
+    ---@param menuOptions table|nil Menu options (optional)
+    ---@param zoneOptions table Zone options
+    ---@return any zoneHandle Zone handle or ID
     addBoxZone = function(name, coords, length, width, menuOptions, zoneOptions)
         local zoneName = name or "box_" .. math.random(1000, 9999)
         local heading = zoneOptions.heading or 0
@@ -322,6 +381,11 @@ Utils.UI = {
         end
     end,
 
+    ---@param name string|nil Target name (optional)
+    ---@param entity number Entity ID
+    ---@param options table Options table
+    ---@param distance number|nil Target distance (optional)
+    ---@return any targetHandle Target handle or ID
     addTargetEntity = function(name, entity, options, distance)
         local targetName = name or "target_" .. math.random(1000, 9999)
         local targetDistance = distance or Config.UI.defaultTargetDistance
@@ -358,13 +422,15 @@ Utils.UI = {
 
             if NetworkGetEntityIsNetworked(entity) then
                 local netId = NetworkGetNetworkIdFromEntity(entity)
-                return exports.ox_target:addNetworkEntity({netId}, oxOptions)
+                return exports.ox_target:addEntity({netId}, oxOptions)
             else
                 return exports.ox_target:addLocalEntity(entity, oxOptions)
             end
         end
     end,
 
+    ---@param target any Target handle or ID
+    ---@param name string|nil Zone name (optional)
     removeZone = function(target, name)
         if targetScript == 'qb' then
             exports['qb-target']:RemoveZone(target)
@@ -377,6 +443,9 @@ Utils.UI = {
         end
     end,
 
+    ---@param target any Target handle or ID
+    ---@param name string|nil Name (optional)
+    ---@param type string|nil Type ('entity', 'networked', 'zone')
     removeTarget = function(target, name, type)
         if targetScript == 'qb' then
             exports['qb-target']:RemoveZone(target)
@@ -386,28 +455,17 @@ Utils.UI = {
             if type == 'entity' then
                 exports.ox_target:removeLocalEntity(target, name)
             elseif type == 'networked' then
-                exports.ox_target:removeNetworkEntity(target, name)
+                local netId = NetworkGetNetworkIdFromEntity(target)
+                exports.ox_target:removeNetworkEntity({netId}, name)
             elseif type == 'zone' then
                 exports.ox_target:removeZone(name or target)
             end
         end
     end,
 
+    ---@param options table Dispatch options
     sendDispatch = function(options)
-        -- Default options
-        local defaults = {
-            title = 'Alert',                    -- Alert title
-            description = '',                   -- Alert description
-            location = '',                      -- Location description (can be empty)
-            coords = vector3(0,0,0),            -- Alert coordinates
-            code = '10-31',                     -- Alert code
-            sprite = 51,                        -- Blip sprite
-            color = 1,                          -- Blip color
-            scale = 1.0,                        -- Blip scale
-            length = 5,                         -- Alert duration in minutes
-            jobs = {'police'},                  -- Jobs to receive the alert
-            sound = true                        -- Play sound (boolean)
-        }
+        local defaults = Config.DispatchDefaults
 
         for k, v in pairs(defaults) do
             if not options[k] then options[k] = v end
@@ -466,6 +524,9 @@ Utils.UI = {
 --   World Utils    --
 ----------------------
 Utils.World = {
+    ---@param coords vector3 Coordinates to check
+    ---@param radius number Radius to check for vehicles
+    ---@return boolean isClear Whether the spawn area is clear
     isSpawnClear = function(coords, radius)
         if coords then
             coords = type(coords) == 'table' and vec3(coords.x, coords.y, coords.z) or coords
@@ -488,6 +549,9 @@ Utils.World = {
         return true
     end,
 
+    ---@param coords vector3 Center coordinates
+    ---@param radius number Radius to clear
+    ---@return boolean cleared Whether any vehicles were deleted
     clearAreaOfNPCVehicles = function(coords, radius)
         local vehicles = GetGamePool('CVehicle')
         local missionVehicleHandle = missionVehicle or 0
@@ -526,6 +590,8 @@ Utils.World = {
         return deletedCount > 0
     end,
 
+    ---@param coords vector3 Coordinates
+    ---@return table streetNames Table with main and cross street names
     getStreetName = function(coords)
         local street, crossing = GetStreetNameAtCoord(coords.x, coords.y, coords.z)
         return {
@@ -534,10 +600,16 @@ Utils.World = {
         }
     end,
 
+    ---@param coords vector3 Coordinates
+    ---@return string zoneName Zone name label
     getZoneName = function(coords)
         return GetLabelText(GetNameOfZone(coords.x, coords.y, coords.z))
     end,
 
+    ---@param coords vector3 Coordinates
+    ---@param peds table List of ped entity IDs
+    ---@return number|nil closestPed Closest ped entity ID
+    ---@return number closestDistance Distance to closest ped
     getClosestPed = function(coords, peds)
         local closestPed, closestDistance = nil, -1
         for _, ped in ipairs(peds) do
@@ -551,6 +623,9 @@ Utils.World = {
         return closestPed, closestDistance
     end,
 
+    ---@param radius number Radius to check for nearby peds
+    ---@param ignorePeds table|nil List of peds to ignore (optional)
+    ---@return boolean isNearby Whether a ped is nearby
     isPedNearby = function(radius, ignorePeds)
         radius = radius or 20.0
         ignorePeds = ignorePeds or {}
@@ -580,6 +655,13 @@ Utils.World = {
         return false
     end,
 
+    ---@param entity number Entity ID
+    ---@param enable boolean Whether to enable outline
+    ---@param r number|nil Red value (optional)
+    ---@param g number|nil Green value (optional)
+    ---@param b number|nil Blue value (optional)
+    ---@param a number|nil Alpha value (optional)
+    ---@return boolean success Whether the outline was set
     setOutline = function(entity, enable, r, g, b, a)
         if not entity or not DoesEntityExist(entity) then return end
 

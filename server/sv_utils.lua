@@ -12,6 +12,7 @@ local banking = Config.Framework.banking:lower()
 Utils.Player = {
     ---@param player table Player object
     ---@param permission string Permission to check
+    ---@return boolean hasPermission
     hasPermission = function(player, permission)
         if frameworkCore == 'qb' then
             return Core.Functions.HasPermission(player.PlayerData.source, permission)
@@ -40,11 +41,23 @@ Utils.Player = {
         end
     end,
 
+    ---@param citizenid string Player's citizen ID
+    ---@return table|nil player Player object or nil if not found
     getOfflinePlayer = function(citizenid)
         if frameworkCore == 'qb' then
             return Core.Player.GetOfflinePlayer(citizenid) or nil
         elseif frameworkCore == 'qbx' then
             return exports.qbx_core:GetOfflinePlayer(citizenid) or nil
+        end
+    end,
+
+    ---@param Player table Player object
+    ---@return boolean success
+    saveOfflinePlayer = function(Player)
+        if frameworkCore == 'qb' then
+            return Core.Player.SaveOffline(Player.PlayerData) or false
+        elseif frameworkCore == 'qbx' then
+            return exports.qbx_core:SaveOffline(Player.PlayerData) or false
         end
     end,
 
@@ -82,6 +95,8 @@ Utils.Player = {
 --   Shared Utils    --
 -----------------------
 Utils.Shared = {
+    ---@param gangName string|nil Gang name or nil for all gangs
+    ---@return table gangData Gang data table or all gangs
     getGangData = function(gangName)
         if frameworkCore == 'qb' then
             return gangName and Core.Shared.Gangs[gangName] or Core.Shared.Gangs
@@ -90,6 +105,8 @@ Utils.Shared = {
         end
     end,
 
+    ---@param jobName string|nil Job name or nil for all jobs
+    ---@return table jobData Job data table or all jobs
     getJobData = function(jobName)
         if frameworkCore == 'qb' then
             return jobName and Core.Shared.Jobs[jobName] or Core.Shared.Jobs
@@ -98,6 +115,10 @@ Utils.Shared = {
         end
     end,
 
+    ---@param entityType string 'job' or 'gang'
+    ---@param entityName string Name of the job or gang
+    ---@param gradeLevel number|string Grade level
+    ---@return table|nil gradeData Grade data table or nil if not found
     getGradeData = function(entityType, entityName, gradeLevel)
         if entityType == 'job' then
             if frameworkCore == 'qb' then
@@ -115,11 +136,13 @@ Utils.Shared = {
         return nil
     end,
 
+    ---@param itemName string Item name
+    ---@return string label Item label or item name if not found
     getItemLabel = function(itemName)
         if frameworkCore == 'qb' then
-            return Core.Shared.Items[itemName]?.label or itemName
+            return (Core.Shared.Items[itemName] and Core.Shared.Items[itemName].label) or itemName
         elseif frameworkCore == 'qbx' then
-            return exports.qbx_core:GetItems()[itemName]?.label or itemName
+            return (exports.qbx_core:GetItems()[itemName] and exports.qbx_core:GetItems()[itemName].label) or itemName
         end
     end
 }
@@ -128,6 +151,10 @@ Utils.Shared = {
 --     Job Utils     --
 -----------------------
 Utils.Job = {
+    ---@param player table Player object
+    ---@param jobName string Job name
+    ---@param grade number|string Grade level
+    ---@return boolean success
     setJob = function(player, jobName, grade)
         if frameworkCore == 'qb' then
             return player.Functions.SetJob(jobName, grade)
@@ -136,6 +163,9 @@ Utils.Job = {
         end
     end,
 
+    ---@param player table Player object
+    ---@param onDuty boolean Whether the player is on duty
+    ---@return boolean success
     setJobDuty = function(player, onDuty)
         if frameworkCore == 'qb' then
             return player.Functions.SetJobDuty(onDuty)
@@ -144,6 +174,9 @@ Utils.Job = {
         end
     end,
 
+    ---@param jobInput string|table Job name or table of job names
+    ---@param onDutyOnly boolean Whether to count only on-duty players
+    ---@return number count Number of players with the job(s)
     getJobCount = function(jobInput, onDutyOnly)
         local count = 0
         local players = Utils.Player.getAllPlayers()
@@ -191,10 +224,14 @@ Utils.Job = {
         return count
     end,
 
+    ---@param onDutyOnly boolean Whether to count only on-duty police
+    ---@return number count Number of police
     getPoliceCount = function(onDutyOnly)
         return Utils.Player.getJobCount(Config.PoliceJobs, onDutyOnly)
     end,
 
+    ---@param onDutyOnly boolean Whether to count only on-duty EMS
+    ---@return number count Number of EMS
     getEMSCount = function(onDutyOnly)
         return Utils.Player.getJobCount(Config.EMSJobs, onDutyOnly)
     end,
@@ -204,6 +241,10 @@ Utils.Job = {
 --    Gang Utlils   --
 ----------------------
 Utils.Gang = {
+    ---@param player table Player object
+    ---@param gangName string Gang name
+    ---@param grade number|string Grade level
+    ---@return boolean success
     setGang = function(player, gangName, grade)
         if frameworkCore == 'qb' then
             return player.Functions.SetGang(gangName, grade)
