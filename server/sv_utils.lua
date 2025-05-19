@@ -51,16 +51,6 @@ Utils.Player = {
         end
     end,
 
-    ---@param Player table Player object
-    ---@return boolean success
-    saveOfflinePlayer = function(Player)
-        if frameworkCore == 'qb' then
-            return Core.Player.SaveOffline(Player.PlayerData) or false
-        elseif frameworkCore == 'qbx' then
-            return exports.qbx_core:SaveOffline(Player.PlayerData) or false
-        end
-    end,
-
     ---@return table players Table of all online players
     getAllPlayers = function()
         if frameworkCore == 'qb' then
@@ -87,6 +77,84 @@ Utils.Player = {
             return player.PlayerData.citizenid
         elseif frameworkCore == 'qbx' then
             return player.PlayerData.citizenid
+        end
+    end,
+
+    ---@param player table Player object
+    ---@param jobName string Job name
+    ---@param grade number|string Grade level
+    ---@return boolean success
+    setJob = function(player, jobName, grade)
+        if frameworkCore == 'qb' then
+            if player.Offline then
+                local jobData = Core.Shared.Jobs[jobName]
+                if jobData then
+                    player.PlayerData.job = {
+                        name = jobName,
+                        label = jobData.label,
+                        onduty = jobData.defaultDuty,
+                        type = jobData.type or 'none',
+                        grade = {
+                            name = jobData.grades[tostring(grade)].name,
+                            level = tonumber(grade),
+                            payment = jobData.grades[tostring(grade)].payment,
+                            isboss = jobData.grades[tostring(grade)].isboss or false
+                        },
+                        isboss = jobData.grades[tostring(grade)].isboss or false
+                    }
+                    Core.Player.SaveOffline(player.PlayerData)
+                    return true
+                else
+                    return false
+                end
+            else
+                return player.Functions.SetJob(jobName, grade)
+            end
+        elseif frameworkCore == 'qbx' then
+            return player.Functions.SetJob(jobName, grade)
+        end
+    end,
+
+    ---@param player table Player object
+    ---@param onDuty boolean Whether the player is on duty
+    ---@return boolean success
+    setJobDuty = function(player, onDuty)
+        if frameworkCore == 'qb' then
+            return player.Functions.SetJobDuty(onDuty)
+        elseif frameworkCore == 'qbx' then
+            return player.Functions.SetJobDuty(onDuty)
+        end
+    end,
+
+    ---@param player table Player object
+    ---@param gangName string Gang name
+    ---@param grade number|string Grade level
+    ---@return boolean success
+    setGang = function(player, gangName, grade)
+        if frameworkCore == 'qb' then
+            if player.Offline then
+                local gangData = Core.Shared.Gangs[gangName]
+                if gangData then
+                    player.PlayerData.gang = {
+                        name = gangName,
+                        label = gangData.label,
+                        grade = {
+                            name = gangData.grades[tostring(grade)].name,
+                            level = tonumber(grade),
+                            isboss = gangData.grades[tostring(grade)].isboss or false
+                        },
+                        isboss = gangData.grades[tostring(grade)].isboss or false
+                    }
+                    Core.Player.SaveOffline(player.PlayerData)
+                    return true
+                else
+                    return false
+                end
+            else
+                return player.Functions.SetGang(gangName, grade)
+            end
+        elseif frameworkCore == 'qbx' then
+            return player.Functions.SetGang(gangName, grade)
         end
     end,
 }
@@ -151,29 +219,6 @@ Utils.Shared = {
 --     Job Utils     --
 -----------------------
 Utils.Job = {
-    ---@param player table Player object
-    ---@param jobName string Job name
-    ---@param grade number|string Grade level
-    ---@return boolean success
-    setJob = function(player, jobName, grade)
-        if frameworkCore == 'qb' then
-            return player.Functions.SetJob(jobName, grade)
-        elseif frameworkCore == 'qbx' then
-            return player.Functions.SetJob(jobName, grade)
-        end
-    end,
-
-    ---@param player table Player object
-    ---@param onDuty boolean Whether the player is on duty
-    ---@return boolean success
-    setJobDuty = function(player, onDuty)
-        if frameworkCore == 'qb' then
-            return player.Functions.SetJobDuty(onDuty)
-        elseif frameworkCore == 'qbx' then
-            return player.Functions.SetJobDuty(onDuty)
-        end
-    end,
-
     ---@param jobInput string|table Job name or table of job names
     ---@param onDutyOnly boolean Whether to count only on-duty players
     ---@return number count Number of players with the job(s)
@@ -234,23 +279,6 @@ Utils.Job = {
     ---@return number count Number of EMS
     getEMSCount = function(onDutyOnly)
         return Utils.Player.getJobCount(Config.EMSJobs, onDutyOnly)
-    end,
-}
-
-----------------------
---    Gang Utlils   --
-----------------------
-Utils.Gang = {
-    ---@param player table Player object
-    ---@param gangName string Gang name
-    ---@param grade number|string Grade level
-    ---@return boolean success
-    setGang = function(player, gangName, grade)
-        if frameworkCore == 'qb' then
-            return player.Functions.SetGang(gangName, grade)
-        elseif frameworkCore == 'qbx' then
-            return player.Functions.SetGang(gangName, grade)
-        end
     end,
 }
 
