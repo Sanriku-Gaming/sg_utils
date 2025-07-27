@@ -2,8 +2,16 @@
 -- @param options string|table|nil Optional parameter to specify which modules to return
 -- @return table Returns the requested utility modules or all modules if none specified
 local function GetUtils(options)
+    local waited = 0
+    local maxWait = 5000 -- 5 seconds max wait
+
+    while not Utils and waited < maxWait do
+        Wait(50)
+        waited = waited + 50
+    end
+
     if not Utils then
-        print("^1[sg_utils]^0 Error: Utils is not defined yet. Returning empty object.")
+        print("^1[sg_utils]^0 Error: Utils is not defined after waiting. Returning empty object.")
         return {}
     end
 

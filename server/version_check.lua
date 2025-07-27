@@ -1,47 +1,50 @@
--- Version checker for sg_utils
-
-local currentVersion = GetResourceMetadata(GetCurrentResourceName(), 'version', 0)
-local resourceName = '^3[sg_utils]^0'
-local githubRawURL = 'https://raw.githubusercontent.com/Sanriku-Gaming/sg_utils/main/fxmanifest.lua'
-
--- Function to extract version from fxmanifest content
-local function ExtractVersion(manifestContent)
-    for line in manifestContent:gmatch("([^\n]*)\n?") do
-        local version = line:match("^version%s+['\"]([^'\"]+)['\"]")
-        if version then
-            return version
-        end
+local function CheckVersion(resourceName)
+    if not resourceName then
+        print('^1Error: Resource name is required for version check^0')
+        return
     end
-    return nil
-end
 
-CreateThread(function()
-    Wait(2000) -- Wait a bit after resource start
+    local currentVersion = GetResourceMetadata(resourceName, 'version', 0)
+    local githubRawURL = ('https://raw.githubusercontent.com/Sanriku-Gaming/%s/main/fxmanifest.lua'):format(resourceName)
+
+    local function ExtractVersion(manifestContent)
+        for line in manifestContent:gmatch("([^\n]*)\n?") do
+            local version = line:match("^version%s+['\"]([^'\"]+)['\"]")
+            if version then
+                return version
+            end
+        end
+        return nil
+    end
 
     PerformHttpRequest(githubRawURL, function(errorCode, resultData, resultHeaders)
         if errorCode ~= 200 then
-            print(resourceName .. ' Failed to check version. Error code: ' .. tostring(errorCode))
+            print('^1Failed to check version for ' .. resourceName .. '. Error code: ' .. tostring(errorCode) .. '^0')
             return
         end
 
-        -- Extract version from the fxmanifest content
         local latestVersion = ExtractVersion(resultData)
 
         if not latestVersion then
-            print(resourceName .. ' Failed to extract version information from GitHub.')
+            print('^1Failed to extract version information from GitHub for ' .. resourceName .. '.^0')
             return
         end
 
         if currentVersion ~= latestVersion then
-            print('\n')
-            print(resourceName .. ' ^1Update available!^0')
-            print(resourceName .. ' Current version: ^1' .. currentVersion .. '^0')
-            print(resourceName .. ' Latest version: ^2' .. latestVersion .. '^0')
-            print(resourceName .. ' Download: ^5https://github.com/Sanriku-Gaming/sg_utils/releases/latest^0')
-            print(resourceName .. ' Changelog: ^5https://github.com/Sanriku-Gaming/sg_utils/blob/main/CHANGELOG.md^0')
-            print('\n')
+            print('^1Update available for ' .. resourceName .. '!^0')
+            print('Current version: ^1' .. currentVersion .. '^0')
+            print('Latest version: ^2' .. latestVersion .. '^0')
+            print('Download: ^5https://github.com/Sanriku-Gaming/' .. resourceName .. '/releases/latest^0')
         else
-            print(resourceName .. ' You are running the latest version (' .. currentVersion .. ').')
+            print('^2' .. resourceName .. ' is running the latest version (' .. currentVersion .. ').^0')
         end
     end, 'GET', '', { ['Cache-Control'] = 'no-cache' })
+end
+
+exports('CheckVersion', CheckVersion)
+
+-- Check sg_utils version on resource start
+CreateThread(function()
+    Wait(2000)
+    CheckVersion('sg_utils')
 end)

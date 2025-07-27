@@ -114,6 +114,16 @@ Utils.Shared = {
         return nil
     end,
 
+    ---@param itemName string|nil Item name or nil for all items
+    ---@return table|nil itemData Item data table or all items
+    getItemData = function(itemName)
+        if frameworkCore == 'qb' then
+            return itemName and Core.Shared.Items[itemName] or Core.Shared.Items
+        elseif frameworkCore == 'qbx' then
+            return itemName and exports.qbx_core:GetItems()[itemName] or exports.qbx_core:GetItems()
+        end
+    end,
+
     ---@param itemName string Item name
     ---@return string label Item label or item name if not found
     getItemLabel = function(itemName)
@@ -674,7 +684,46 @@ Utils.World = {
             SetEntityDrawOutline(entity, false)
             return false
         end
-    end
+    end,
+
+    ---@param model string Model name
+    ---@param coords vector4 Coordinates
+    ---@param freeze boolean Whether to freeze the prop
+    ---@return number prop Prop handle
+    createProp = function(model, coords, freeze)
+        local prop = nil
+        local modelHash = GetHashKey(model)
+        RequestModel(modelHash)
+        while not HasModelLoaded(modelHash) do
+            Wait(100)
+        end
+
+        prop = CreateObject(modelHash, coords.x, coords.y, coords.z, true, true, false)
+        if freeze then
+            FreezeEntityPosition(prop, true)
+        end
+
+        return prop
+    end,
+
+    ---@param coords vector3 Coordinates
+    ---@param sprite number Sprite ID
+    ---@param color number Color ID
+    ---@param scale number Scale
+    ---@param text string Text
+    ---@param shortRange boolean Whether to use short range
+    ---@return number blip Blip handle
+    createBlip = function(coords, sprite, color, scale, text, shortRange)
+        local blip = AddBlipForCoord(coords.x, coords.y, coords.z)
+        SetBlipSprite(blip, sprite)
+        SetBlipColor(blip, color)
+        SetBlipScale(blip, scale)
+        SetBlipAsShortRange(blip, shortRange)
+        BeginTextCommandSetBlipName("STRING")
+        AddTextComponentString(text)
+        EndTextCommandSetBlipName(blip)
+        return blip
+    end,
 }
 
 ----------------------
@@ -682,10 +731,32 @@ Utils.World = {
 ----------------------
 CreateThread(function()
     if frameworkCore == 'qb' then
+        local waited = 0
+        while GetResourceState('qb-core') ~= 'started' do
+            Wait(100)
+            waited = waited + 100
+            if waited > 10000 then
+                print('^1[sg_utils]^0 Error: qb-core not started after 10 seconds!')
+                return
+            end
+        end
+        Wait(500)
         Core = exports['qb-core']:GetCoreObject()
+        if not Core then
+            print('^1[sg_utils]^0 Error: Could not get Core object from qb-core!')
+        end
     elseif frameworkCore == 'qbx' then
         -- QBX doesn't use a Core object, it uses direct exports
         -- No initialization needed
+    end
+end)
+
+----------------------
+--      Events      --
+----------------------
+RegisterNetEvent('QBCore:Client:UpdateObject', function()
+    if frameworkCore == 'qb' then
+        Core = exports['qb-core']:GetCoreObject()
     end
 end)
 

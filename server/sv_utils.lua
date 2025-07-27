@@ -204,6 +204,16 @@ Utils.Shared = {
         return nil
     end,
 
+    ---@param itemName string|nil Item name or nil for all items
+    ---@return table|nil itemData Item data table or all items
+    getItemData = function(itemName)
+        if frameworkCore == 'qb' then
+            return itemName and Core.Shared.Items[itemName] or Core.Shared.Items
+        elseif frameworkCore == 'qbx' then
+            return itemName and exports.qbx_core:GetItems()[itemName] or exports.qbx_core:GetItems()
+        end
+    end,
+
     ---@param itemName string Item name
     ---@return string label Item label or item name if not found
     getItemLabel = function(itemName)
@@ -435,11 +445,19 @@ Utils.Inventory = {
             })
         elseif inventory == 'ps' then
             return exports['ps-inventory']:OpenInventory(src, stashId, {
-                maxweight = maxWeight,
-                slots = maxSlots,
+                maxweight = stashData.maxWeight,
+                slots = stashData.maxSlots,
             })
         elseif inventory == 'ox' then
             return exports.ox_inventory:forceOpenInventory(src, 'stash', stashId)
+        end
+    end,
+
+    createUseableItem = function(itemName, metadata)
+        if frameworkCore == 'qb' then
+            return Core.Functions.CreateUseableItem(itemName, metadata)
+        elseif frameworkCore == 'qbx' then
+            return exports.qbx_core:CreateUseableItem(itemName, metadata)
         end
     end,
 }
@@ -559,10 +577,16 @@ end)
 ----------------------
 CreateThread(function()
     if frameworkCore == 'qb' then
-        if GetResourceState('qb-core') ~= 'started' then
-            print('QBCore not started. Please start qb-core before this resource or change Config.Framework.core.')
-            return
+        local waited = 0
+        while GetResourceState('qb-core') ~= 'started' do
+            Wait(100)
+            waited = waited + 100
+            if waited > 10000 then
+                print('^1[sg_utils]^0 Error: qb-core not started after 10 seconds!')
+                return
+            end
         end
+        Wait(500)
         Core = exports['qb-core']:GetCoreObject()
     elseif frameworkCore == 'qbx' then
         if GetResourceState('qbx_core') ~= 'started' then
@@ -576,6 +600,22 @@ CreateThread(function()
         return
     end
 end)
+
+----------------------
+--      Events      --
+----------------------
+RegisterNetEvent('QBCore:Server:UpdateObject', function()
+    if frameworkCore == 'qb' then
+        Core = exports['qb-core']:GetCoreObject()
+    end
+end)
+
+--------------------------------
+--         Exports            --
+--------------------------------
+exports('GetJobCount', Utils.Job.getJobCount)
+exports('GetPoliceCount', Utils.Job.getPoliceCount)
+exports('GetAmbulanceCount', Utils.Job.getAmbulanceCount)
 
 -- Return Utils so it can be accessed via the export
 return Utils
