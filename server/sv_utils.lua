@@ -282,13 +282,13 @@ Utils.Job = {
     ---@param onDutyOnly boolean Whether to count only on-duty police
     ---@return number count Number of police
     getPoliceCount = function(onDutyOnly)
-        return Utils.Player.getJobCount(Config.PoliceJobs, onDutyOnly)
+        return Utils.Job.getJobCount(Config.PoliceJobs, onDutyOnly)
     end,
 
     ---@param onDutyOnly boolean Whether to count only on-duty EMS
     ---@return number count Number of EMS
     getEMSCount = function(onDutyOnly)
-        return Utils.Player.getJobCount(Config.EMSJobs, onDutyOnly)
+        return Utils.Job.getJobCount(Config.EMSJobs, onDutyOnly)
     end,
 }
 
