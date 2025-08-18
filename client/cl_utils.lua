@@ -699,6 +699,7 @@ Utils.World = {
         end
 
         prop = CreateObject(modelHash, coords.x, coords.y, coords.z, true, true, false)
+        SetEntityHeading(prop, coords.w)
         if freeze then
             FreezeEntityPosition(prop, true)
         end
